@@ -1,7 +1,7 @@
 {
-  "name": "webar-project",
+  "name": "webar-template",
   "version": "1.0.0",
-  "description": "WebAR project met video en 3D model",
+  "private": true,
   "scripts": {
     "start": "npx serve ."
   }

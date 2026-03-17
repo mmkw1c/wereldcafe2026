@@ -1,94 +1,131 @@
-import * as THREE from 'https://unpkg.com/three@0.165.0/build/three.module.js';
-import { GLTFLoader } from 'https://unpkg.com/three@0.165.0/examples/jsm/loaders/GLTFLoader.js';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MindARThree } from 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js';
 
 const startBtn = document.querySelector('#startBtn');
+const statusEl = document.querySelector('#status');
+const errorBox = document.querySelector('#errorBox');
+const ui = document.querySelector('#ui');
 const video = document.querySelector('#promoVideo');
+const app = document.querySelector('#app');
 
-let mindarThree;
-let renderer;
-let scene;
-let camera;
-let ring;
+function setStatus(text) {
+  statusEl.textContent = text;
+  console.log(text);
+}
+
+function showError(text) {
+  console.error(text);
+  errorBox.style.display = 'block';
+  errorBox.innerText = text;
+}
+
+function clearError() {
+  errorBox.style.display = 'none';
+}
 
 startBtn.addEventListener('click', startAR);
 
 async function startAR() {
+  clearError();
+
   try {
-    mindarThree = new MindARThree({
-      container: document.body,
-      imageTargetSrc: './targets/targets.mind',
+    setStatus('Initialiseren...');
+
+    // Check video file
+    if (!video.src || video.src.includes('undefined')) {
+      showError('❌ video.mp4 ontbreekt in /public/assets/');
+      return;
+    }
+
+    // Check video load
+    video.onerror = () => {
+      showError('❌ video.mp4 kan niet geladen worden');
+    };
+
+    video.onloadeddata = () => {
+      console.log('Video OK');
+    };
+
+    // Init MindAR
+    const mindarThree = new MindARThree({
+      container: app,
+      imageTargetSrc: './public/targets/targets.mind',
     });
 
-    ({ renderer, scene, camera } = mindarThree);
+    const { renderer, scene, camera } = mindarThree;
 
-    const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
-    scene.add(light);
+    // Licht
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1));
 
     const anchor = mindarThree.addAnchor(0);
 
-    // Video texture
+    // Video plane
     const videoTexture = new THREE.VideoTexture(video);
-    const planeGeometry = new THREE.PlaneGeometry(1, 0.5625); // 16:9
-    const planeMaterial = new THREE.MeshBasicMaterial({
-      map: videoTexture,
-      transparent: true,
-    });
+    const plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.2, 0.675),
+      new THREE.MeshBasicMaterial({ map: videoTexture })
+    );
+    anchor.group.add(plane);
 
-    const videoPlane = new THREE.Mesh(planeGeometry, planeMaterial);
-    videoPlane.position.set(0, 0, 0);
-    anchor.group.add(videoPlane);
+    // Model laden
+    setStatus('Model laden...');
 
-    // Ring
-    const ringGeometry = new THREE.TorusGeometry(0.35, 0.02, 16, 64);
-    const ringMaterial = new THREE.MeshStandardMaterial();
-    ring = new THREE.Mesh(ringGeometry, ringMaterial);
-    ring.position.set(0, 0.45, 0);
-    ring.rotation.x = Math.PI / 2;
-    anchor.group.add(ring);
-
-    // Remote GLB model
     const loader = new GLTFLoader();
+
+    let modelLoaded = false;
+
     loader.load(
-      'http://elektrafungi.com/model.glb',
+      './public/assets/model.glb',
       (gltf) => {
+        modelLoaded = true;
+
         const model = gltf.scene;
-        model.scale.set(0.2, 0.2, 0.2);
-        model.position.set(0.45, -0.2, 0);
+        model.scale.set(0.25, 0.25, 0.25);
+        model.position.set(0, -0.2, 0);
+
         anchor.group.add(model);
+        setStatus('Model geladen');
       },
       undefined,
-      (error) => {
-        console.error('Model kon niet geladen worden:', error);
+      () => {
+        showError('❌ model.glb kon niet geladen worden (check pad of bestand)');
       }
     );
 
+    // Safety timeout
+    setTimeout(() => {
+      if (!modelLoaded) {
+        showError('❌ model.glb niet gevonden of fout bestand');
+      }
+    }, 3000);
+
     anchor.onTargetFound = async () => {
-      console.log('Target gevonden');
+      setStatus('Target gevonden');
+
       try {
         await video.play();
-      } catch (err) {
-        console.warn('Video kon niet starten:', err);
+      } catch {
+        showError('❌ video kon niet starten');
       }
     };
 
     anchor.onTargetLost = () => {
-      console.log('Target kwijt');
+      setStatus('Target kwijt');
       video.pause();
     };
 
     await mindarThree.start();
 
     renderer.setAnimationLoop(() => {
-      if (ring) {
-        ring.rotation.z += 0.02;
-      }
       renderer.render(scene, camera);
     });
 
-    startBtn.style.display = 'none';
-  } catch (error) {
-    console.error('Fout bij starten AR:', error);
-    alert('AR kon niet starten. Check targets.mind, video-link en model-link.');
+    ui.classList.add('hidden');
+    setStatus('Scan de afbeelding');
+
+  } catch (err) {
+    showError('❌ AR start mislukt (targets.mind ontbreekt of fout)');
+    console.error(err);
   }
 }
