@@ -50,7 +50,7 @@ async function startAR() {
     // Init MindAR
     const mindarThree = new MindARThree({
       container: app,
-      imageTargetSrc: './public/targets/targets.mind',
+      imageTargetSrc: './public/targets/wereldcafe.mind',
     });
 
     const { renderer, scene, camera } = mindarThree;
