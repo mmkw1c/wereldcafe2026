@@ -76,7 +76,7 @@ async function startAR() {
     let modelLoaded = false;
 
     loader.load(
-      './public/assets/model.glb',
+      'http://elektrafungi.com/model.glb',
       (gltf) => {
         modelLoaded = true;
 
