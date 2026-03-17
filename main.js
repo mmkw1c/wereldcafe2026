@@ -25,10 +25,9 @@ async function startAR() {
     const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
     scene.add(light);
 
-    // Ankerpunt: target index 0
     const anchor = mindarThree.addAnchor(0);
 
-    // VIDEO TEXTURE
+    // Video texture
     const videoTexture = new THREE.VideoTexture(video);
     const planeGeometry = new THREE.PlaneGeometry(1, 0.5625); // 16:9
     const planeMaterial = new THREE.MeshBasicMaterial({
@@ -40,7 +39,7 @@ async function startAR() {
     videoPlane.position.set(0, 0, 0);
     anchor.group.add(videoPlane);
 
-    // Simpel 3D-element
+    // Ring
     const ringGeometry = new THREE.TorusGeometry(0.35, 0.02, 16, 64);
     const ringMaterial = new THREE.MeshStandardMaterial();
     ring = new THREE.Mesh(ringGeometry, ringMaterial);
@@ -48,10 +47,10 @@ async function startAR() {
     ring.rotation.x = Math.PI / 2;
     anchor.group.add(ring);
 
-    // Optioneel GLB model
+    // Remote GLB model
     const loader = new GLTFLoader();
     loader.load(
-      './assets/model.glb',
+      'http://elektrafungi.com/model.glb',
       (gltf) => {
         const model = gltf.scene;
         model.scale.set(0.2, 0.2, 0.2);
@@ -60,7 +59,7 @@ async function startAR() {
       },
       undefined,
       (error) => {
-        console.warn('Geen model geladen of fout in model.glb:', error);
+        console.error('Model kon niet geladen worden:', error);
       }
     );
 
@@ -90,6 +89,6 @@ async function startAR() {
     startBtn.style.display = 'none';
   } catch (error) {
     console.error('Fout bij starten AR:', error);
-    alert('AR start niet. Controleer je targetbestand, video-link en HTTPS.');
+    alert('AR kon niet starten. Check targets.mind, video-link en model-link.');
   }
 }

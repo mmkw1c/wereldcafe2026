@@ -1,7 +1,7 @@
 {
   "name": "webar-project",
   "version": "1.0.0",
-  "description": "WebAR project met MindAR en Three.js",
+  "description": "WebAR project met video en 3D model",
   "scripts": {
     "start": "npx serve ."
   }
