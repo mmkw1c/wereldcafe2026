@@ -1,0 +1,8 @@
+{
+  "name": "webar-project",
+  "version": "1.0.0",
+  "description": "WebAR project met MindAR en Three.js",
+  "scripts": {
+    "start": "npx serve ."
+  }
+}

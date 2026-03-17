@@ -1,3 +1,59 @@
-<html>
-  <h1>WereldCafe placeholder</h1>
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WebAR Video + 3D</title>
+  <style>
+    html, body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background: #000;
+    }
+
+    #startBtn {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 20;
+      padding: 12px 16px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+    }
+
+    #hint {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      z-index: 20;
+      color: white;
+      background: rgba(0,0,0,0.5);
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <button id="startBtn">Start AR</button>
+  <div id="hint">Richt je camera op de target-afbeelding</div>
+
+  <video
+    id="promoVideo"
+    src="http://elektrafungi.com/video.mp4"
+    playsinline
+    webkit-playsinline
+    muted
+    loop
+    preload="auto"
+    crossorigin="anonymous"
+    style="display:none"
+  ></video>
+
+  <script type="module" src="./main.js"></script>
+</body>
 </html>
