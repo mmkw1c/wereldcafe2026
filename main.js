@@ -205,12 +205,11 @@ async function startAR() {
       showPlayButton();
     };
 
-    anchor.onTargetLost = () => {
-      setStatus('Target kwijt');
-      plane.visible = false;
-      video.pause();
-      hidePlayButton();
-    };
+anchor.onTargetLost = () => {
+  setStatus('Target kwijt');
+  plane.visible = false;
+  hidePlayButton();
+};
 
     await mindarThree.start();
 
