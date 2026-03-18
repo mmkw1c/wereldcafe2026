@@ -24,7 +24,17 @@ function clearError() {
   errorBox.style.display = 'none';
 }
 
-startBtn.addEventListener('click', startAR);
+startBtn.addEventListener('click', async () => {
+  await startAR();
+
+  // 🔊 VIDEO STARTEN MET GELUID (cruciaal)
+  try {
+    video.currentTime = 0; // start vanaf begin
+    await video.play();
+  } catch (err) {
+    console.warn("Video play geblokkeerd:", err);
+  }
+});
 
 async function startAR() {
   clearError();
@@ -82,7 +92,7 @@ async function startAR() {
 
         const model = gltf.scene;
         model.scale.set(0.25, 0.25, 0.25);
-        model.position.set(0, -0.2, 0);
+        model.position.set(0, -0.2, -0.5);
 
         anchor.group.add(model);
         setStatus('Model geladen');
@@ -99,7 +109,7 @@ async function startAR() {
         showError('❌ model.glb niet gevonden of fout bestand');
       }
     }, 3000);
-
+/*
     anchor.onTargetFound = async () => {
       setStatus('Target gevonden');
 
@@ -109,7 +119,7 @@ async function startAR() {
         showError('❌ video kon niet starten');
       }
     };
-
+*/
     anchor.onTargetLost = () => {
       setStatus('Target kwijt');
       video.pause();
