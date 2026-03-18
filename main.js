@@ -4,7 +4,7 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { MindARThree } from 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js';
 
 const startBtn = document.querySelector('#startBtn');
-const playVideoBtn = document.querySelector('#playVideoBtn'); // TOEGEVOEGD: aparte knop voor video playback
+const playVideoBtn = document.querySelector('#playVideoBtn');
 const statusEl = document.querySelector('#status');
 const errorBox = document.querySelector('#errorBox');
 const ui = document.querySelector('#ui');
@@ -26,28 +26,22 @@ function clearError() {
   errorBox.style.display = 'none';
 }
 
-// TOEGEVOEGD:
-// helper om de play-knop veilig te tonen
 function showPlayButton() {
   if (playVideoBtn) {
     playVideoBtn.classList.remove('hidden');
   }
 }
 
-// TOEGEVOEGD:
-// helper om de play-knop veilig te verbergen
 function hidePlayButton() {
   if (playVideoBtn) {
     playVideoBtn.classList.add('hidden');
   }
 }
 
-// TOEGEVOEGD:
-// aparte user interaction voor video met geluid
 if (playVideoBtn) {
   playVideoBtn.addEventListener('click', async () => {
     try {
-      video.currentTime = 0; // optioneel: altijd vanaf begin
+      video.currentTime = 0;
       await video.play();
       hidePlayButton();
       setStatus('Video speelt');
@@ -59,35 +53,25 @@ if (playVideoBtn) {
 }
 
 startBtn.addEventListener('click', async () => {
-  // extra zekerheid voor mobiel/iPhone inline video
   video.setAttribute('playsinline', '');
   video.setAttribute('webkit-playsinline', '');
-
-  // TOEGEVOEGD:
-  // preload helpen voor mobiel
   video.load();
 
   await startAR();
-
-  // AANGEPAST:
-  // video niet meer hier starten, want dat is vaak niet "direct genoeg"
-  // de aparte playVideoBtn doet dat nu betrouwbaarder
 });
 
 async function startAR() {
   clearError();
-  hidePlayButton(); // TOEGEVOEGD: play-knop standaard verbergen bij opstarten
+  hidePlayButton();
 
   try {
     setStatus('Initialiseren...');
 
-    // Check video file
     if (!video.src || video.src.includes('undefined')) {
       showError('❌ video.mp4 ontbreekt in /public/assets/');
       return;
     }
 
-    // Check video load
     video.onerror = () => {
       showError('❌ video.mp4 kan niet geladen worden');
     };
@@ -96,13 +80,10 @@ async function startAR() {
       console.log('Video OK');
     };
 
-    // TOEGEVOEGD:
-    // extra debug moment: video is speelbaar
     video.oncanplay = () => {
       console.log('Video can play');
     };
 
-    // Init MindAR
     const mindarThree = new MindARThree({
       container: app,
       imageTargetSrc: './public/targets/inclusie.mind',
@@ -110,23 +91,17 @@ async function startAR() {
 
     const { renderer, scene, camera } = mindarThree;
 
-    // renderer settings voor mooiere kleuren en contrast
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.0;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-    // HDRI environment map laden voor mooiere reflecties/materialen
-    // Zet alleen scene.environment, NIET scene.background in AR
     const rgbeLoader = new RGBELoader();
     rgbeLoader.load(
       './public/tree_lined_driveway_1k.hdr',
       (texture) => {
         texture.mapping = THREE.EquirectangularReflectionMapping;
         scene.environment = texture;
-
-        // Optioneel
         scene.environmentIntensity = 0.8;
-
         console.log('HDRI geladen');
       },
       undefined,
@@ -135,23 +110,19 @@ async function startAR() {
       }
     );
 
-    // basislicht - zachte algemene belichting
     const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
     scene.add(hemiLight);
 
-    // hoofdlicht - geeft vorm, highlights en meer diepte aan je model
     const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
     mainLight.position.set(2, 4, 3);
     scene.add(mainLight);
 
-    // fill light - maakt de schaduwkant zachter
     const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
     fillLight.position.set(-2, 2, -2);
     scene.add(fillLight);
 
     const anchor = mindarThree.addAnchor(0);
 
-    // Video plane
     const videoTexture = new THREE.VideoTexture(video);
     videoTexture.colorSpace = THREE.SRGBColorSpace;
 
@@ -163,16 +134,12 @@ async function startAR() {
       })
     );
 
-    // video eerst verbergen tot target gevonden is
     plane.visible = false;
-
     anchor.group.add(plane);
 
-    // Model laden
     setStatus('Model laden...');
 
     const loader = new GLTFLoader();
-
     let modelLoaded = false;
 
     loader.load(
@@ -181,13 +148,28 @@ async function startAR() {
         modelLoaded = true;
 
         const model = gltf.scene;
-        model.scale.set(0.25, 0.25, 0.25);
+
+        // ================================
+        // NIEUW: wrapper group tussen anchor en model
+        // ================================
+        const wrapper = new THREE.Group();
+
+        // ================================
+        // BELANGRIJK: reset het ruwe model eerst
+        // zodat alleen de wrapper jouw preview-waardes draagt
+        // ================================
         model.position.set(0, 0, 0);
+        model.rotation.set(0, 0, 0);
+        model.scale.set(1, 1, 1);
 
-        // Three.js gebruikt radialen, geen graden
-        model.rotation.set(0, 0, Math.PI / 2);
+        // ================================
+        // JOUW GETUNDE WAARDES HIER
+        // afkomstig uit preview
+        // ================================
+        wrapper.position.set(0.000, 0.000, -0.098);
+        wrapper.rotation.set(-1.388, 3.142, 1.138);
+        wrapper.scale.set(0.133, 0.133, 0.133);
 
-        // materiaal/mesh update voor nettere rendering
         model.traverse((child) => {
           if (child.isMesh) {
             child.castShadow = false;
@@ -199,7 +181,10 @@ async function startAR() {
           }
         });
 
-        anchor.group.add(model);
+        // model in wrapper, wrapper in anchor
+        wrapper.add(model);
+        anchor.group.add(wrapper);
+
         setStatus('Model geladen');
       },
       undefined,
@@ -208,28 +193,23 @@ async function startAR() {
       }
     );
 
-    // Safety timeout
     setTimeout(() => {
       if (!modelLoaded) {
         showError('❌ model.glb niet gevonden of fout bestand');
       }
     }, 3000);
 
-    // AANGEPAST:
-    // target gevonden -> videovlak tonen + play-knop tonen
     anchor.onTargetFound = () => {
       setStatus('Target gevonden');
       plane.visible = true;
-      showPlayButton(); // TOEGEVOEGD: gebruiker kan nu handmatig de video starten
+      showPlayButton();
     };
 
-    // AANGEPAST:
-    // target kwijt -> videovlak verbergen + video pauzeren + play-knop verbergen
     anchor.onTargetLost = () => {
       setStatus('Target kwijt');
       plane.visible = false;
-      video.pause(); // TOEGEVOEGD: video stoppen als target weg is
-      hidePlayButton(); // TOEGEVOEGD
+      video.pause();
+      hidePlayButton();
     };
 
     await mindarThree.start();
