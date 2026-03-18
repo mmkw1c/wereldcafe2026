@@ -92,7 +92,7 @@ async function startAR() {
 
         const model = gltf.scene;
         model.scale.set(0.25, 0.25, 0.25);
-        model.position.set(0, -0.2, -0.5);
+        model.position.set(0, 0, -0);
 
         anchor.group.add(model);
         setStatus('Model geladen');
