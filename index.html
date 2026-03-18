@@ -69,6 +69,33 @@
       display: none;
     }
 
+    /* ========================= */
+    /* TOEGEVOEGD: PLAY BUTTON */
+    /* ========================= */
+    #playVideoBtn {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+
+      padding: 14px 22px;
+      font-size: 16px;
+      border-radius: 999px;
+      border: none;
+      background: rgba(255,255,255,0.95);
+      color: #000;
+      cursor: pointer;
+
+      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+
+    #playVideoBtn:active {
+      transform: translateX(-50%) scale(0.96);
+    }
+
     .hidden {
       display: none !important;
     }
@@ -96,14 +123,23 @@
 
   <div id="errorBox"></div>
 
+  <!-- ========================= -->
+  <!-- TOEGEVOEGD: PLAY BUTTON -->
+  <!-- ========================= -->
+  <button id="playVideoBtn" class="hidden">
+    ▶ Speel video
+  </button>
+
+  <!-- ========================= -->
+  <!-- VIDEO -->
+  <!-- ========================= -->
   <video
     id="promoVideo"
     src="https://elektrafungi.com/kw1c/video.mp4"
     playsinline
-    muted
-    loop
+    webkit-playsinline
     preload="auto"
-    autoplay
+    loop
     style="display:none"
   ></video>
 
