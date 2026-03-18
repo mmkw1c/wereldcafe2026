@@ -126,6 +126,7 @@ async function startAR() {
         const model = gltf.scene;
         model.scale.set(0.25, 0.25, 0.25);
         model.position.set(0, 0, 0);
+        model.rotation.set(0, 0, 90);
 
         // TOEGEVOEGD:
         // zorgt dat meshes in het model netjes schaduw/licht kunnen ontvangen
