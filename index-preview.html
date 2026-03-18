@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Scene Preview</title>
+
   <style>
     html,
     body {
@@ -15,8 +16,6 @@
       font-family: sans-serif;
     }
 
-    /* TOEGEVOEGD:
-       vaste fullscreen container voor Three.js canvas */
     #app {
       position: fixed;
       inset: 0;
@@ -51,23 +50,31 @@
       line-height: 1.4;
     }
   </style>
+
+  <!-- NODIG:
+       import map zodat add-ons hun interne `three` import kunnen oplossen -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.165.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.165.0/examples/jsm/"
+      }
+    }
+  </script>
 </head>
 <body>
   <div id="app"></div>
   <div id="status">Laden...</div>
   <div id="errorBox"></div>
 
-  <!-- AANGEPAST:
-       pad gewijzigd van ./public/assets/video.mp4 naar /assets/video.mp4
-       omdat bestanden in public meestal vanaf root geserveerd worden -->
   <video
     id="promoVideo"
-    src="https://elektrafungi.com/kw1c/video.mp4"
+    src="/assets/video.mp4"
     playsinline
     webkit-playsinline
     loop
     crossorigin="anonymous"
-    style="display: none"
+    style="display:none"
   ></video>
 
   <script type="module" src="./main-preview.js"></script>
