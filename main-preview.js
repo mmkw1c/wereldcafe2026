@@ -29,6 +29,16 @@ async function startPreview() {
   clearError();
 
   try {
+    // TOEGEVOEGD:
+    // harde checks zodat je sneller ziet wat ontbreekt
+    if (!app) {
+      throw new Error('#app niet gevonden in je HTML');
+    }
+
+    if (!video) {
+      throw new Error('#promoVideo niet gevonden in je HTML');
+    }
+
     setStatus('Preview initialiseren...');
 
     // ================================
@@ -36,19 +46,24 @@ async function startPreview() {
     // ================================
     const scene = new THREE.Scene();
 
-    const camera = new THREE.PerspectiveCamera(
-      45,
-      app.clientWidth / app.clientHeight,
-      0.1,
-      100
-    );
-    camera.position.set(0, 1.2, 3.2);
+    // TOEGEVOEGD:
+    // neutrale achtergrond als fallback, tot HDRI geladen is
+    scene.background = new THREE.Color(0x111111);
+
+    // TOEGEVOEGD:
+    // fallback afmetingen als app nog geen grootte heeft
+    const width = app.clientWidth || window.innerWidth;
+    const height = app.clientHeight || window.innerHeight;
+
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+    camera.position.set(0, 1.0, 3.0);
 
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
-      alpha: true,
+      alpha: false, // AANGEPAST: voor preview is false meestal stabieler
     });
-    renderer.setSize(app.clientWidth, app.clientHeight);
+
+    renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
     // ================================
@@ -58,20 +73,24 @@ async function startPreview() {
     renderer.toneMappingExposure = 1.0;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
+    // TOEGEVOEGD:
+    // bestaande canvas opruimen
     app.innerHTML = '';
     app.appendChild(renderer.domElement);
 
     // ================================
     // 3. CONTROLS
-    // hiermee kun je rond je scene draaien
     // ================================
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.target.set(0, 0.6, 0);
+    controls.update();
 
     // ================================
     // 4. HDRI
     // ================================
+    // AANGEPAST:
+    // foutmelding duidelijker gemaakt
     const rgbeLoader = new RGBELoader();
     rgbeLoader.load(
       './public/hdr/studio.hdr',
@@ -79,20 +98,20 @@ async function startPreview() {
         texture.mapping = THREE.EquirectangularReflectionMapping;
         scene.environment = texture;
 
-        // achtergrond alleen in preview, niet in AR
+        // Alleen in preview tonen we de HDRI als achtergrond
         scene.background = texture;
 
-        console.log('HDRI geladen');
+        setStatus('HDRI geladen');
       },
       undefined,
-      () => {
-        console.warn('HDRI kon niet geladen worden');
+      (err) => {
+        console.warn('HDRI kon niet geladen worden:', err);
+        setStatus('HDRI niet geladen, preview draait zonder HDRI');
       }
     );
 
     // ================================
     // 5. LICHTEN
-    // dezelfde setup als je AR scene
     // ================================
     const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
     scene.add(hemiLight);
@@ -105,9 +124,14 @@ async function startPreview() {
     fillLight.position.set(-2, 2, -2);
     scene.add(fillLight);
 
+    // TOEGEVOEGD:
+    // extra zacht frontlicht zodat je model bijna altijd zichtbaar blijft
+    const frontLight = new THREE.DirectionalLight(0xffffff, 0.35);
+    frontLight.position.set(0, 1.5, 2);
+    scene.add(frontLight);
+
     // ================================
-    // 6. HELPER GRID
-    // handig om schaal en positie te checken
+    // 6. HELPERS
     // ================================
     const grid = new THREE.GridHelper(10, 20);
     scene.add(grid);
@@ -119,12 +143,19 @@ async function startPreview() {
     // 7. VIDEO CHECK
     // ================================
     if (!video.src || video.src.includes('undefined')) {
-      showError('❌ video.mp4 ontbreekt in /public/assets/');
+      showError('❌ video.mp4 ontbreekt of pad is fout');
       return;
     }
 
+    // TOEGEVOEGD:
+    // voor preview liever muted starten, zodat autoplay meestal lukt
+    // haal dit weg als je bewust op klik met geluid wilt starten
+    video.muted = true;
+    video.loop = true;
+    video.playsInline = true;
     video.setAttribute('playsinline', '');
     video.setAttribute('webkit-playsinline', '');
+    video.crossOrigin = 'anonymous';
 
     video.onerror = () => {
       showError('❌ video.mp4 kan niet geladen worden');
@@ -132,7 +163,6 @@ async function startPreview() {
 
     // ================================
     // 8. VIDEO-PLANE
-    // hier staat je video gewoon in de scene
     // ================================
     const videoTexture = new THREE.VideoTexture(video);
     videoTexture.colorSpace = THREE.SRGBColorSpace;
@@ -142,12 +172,27 @@ async function startPreview() {
       new THREE.MeshBasicMaterial({
         map: videoTexture,
         transparent: true,
+        side: THREE.DoubleSide, // TOEGEVOEGD
       })
     );
 
-    // positie van het videoscherm in de previewscene
-    videoPlane.position.set(0, 0.7, 0);
+    // AANGEPAST:
+    // iets hoger en iets naar achter zodat model en video niet precies botsen
+    videoPlane.position.set(0, 0.9, -0.15);
     scene.add(videoPlane);
+
+    // TOEGEVOEGD:
+    // randje om videovlak beter te zien
+    const frame = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.28, 0.755),
+      new THREE.MeshStandardMaterial({
+        color: 0x222222,
+        metalness: 0.25,
+        roughness: 0.6,
+      })
+    );
+    frame.position.set(0, 0.9, -0.16);
+    scene.add(frame);
 
     // ================================
     // 9. MODEL LADEN
@@ -180,29 +225,37 @@ async function startPreview() {
         setStatus('Preview klaar');
       },
       undefined,
-      () => {
+      (err) => {
+        console.error(err);
         showError('❌ model.glb kon niet geladen worden');
       }
     );
 
     // ================================
     // 10. VIDEO STARTEN
-    // in preview mag hij direct proberen te starten
     // ================================
+    // AANGEPAST:
+    // muted autoplay heeft meer kans van slagen
     try {
       video.currentTime = 0;
       await video.play();
+      console.log('Video gestart');
     } catch (err) {
-      console.warn('Video play geblokkeerd:', err);
+      console.warn('Video autoplay geblokkeerd:', err);
+      setStatus('Preview klaar - video niet automatisch gestart');
     }
 
     // ================================
     // 11. RESIZE
     // ================================
     window.addEventListener('resize', () => {
-      camera.aspect = app.clientWidth / app.clientHeight;
+      const newWidth = app.clientWidth || window.innerWidth;
+      const newHeight = app.clientHeight || window.innerHeight;
+
+      camera.aspect = newWidth / newHeight;
       camera.updateProjectionMatrix();
-      renderer.setSize(app.clientWidth, app.clientHeight);
+
+      renderer.setSize(newWidth, newHeight);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     });
 
@@ -215,8 +268,8 @@ async function startPreview() {
     });
 
   } catch (err) {
-    showError('❌ Preview start mislukt');
     console.error(err);
+    showError(`❌ Preview start mislukt: ${err.message}`);
   }
 }
 
