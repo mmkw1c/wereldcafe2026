@@ -156,7 +156,7 @@ async function startPreview() {
 
         model.scale.set(0.25, 0.25, 0.25);
         model.position.set(0, 0, 0);
-        model.rotation.set(0, 0, Math.PI / 2);
+       model.rotation.set(0, -Math.PI / 2, 0);
 
         model.traverse((child) => {
           if (child.isMesh) {
