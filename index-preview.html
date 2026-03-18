@@ -49,6 +49,19 @@
       max-width: 420px;
       line-height: 1.4;
     }
+    #coordsBox {
+    position: fixed;
+    top: 120px;
+    left: 16px;
+    z-index: 10;
+    color: white;
+    background: rgba(0, 0, 0, 0.55);
+    padding: 10px 12px;
+    border-radius: 8px;
+    font: 12px/1.4 monospace;
+    white-space: pre-wrap;
+    min-width: 220px;
+  }
   </style>
 
   <!-- NODIG:
@@ -61,6 +74,10 @@
       }
     }
   </script>
+  <script type="module">
+  import GUI from 'https://cdn.jsdelivr.net/npm/lil-gui@0.19/+esm';
+  window.GUI = GUI;
+</script>
 </head>
 <body>
   <div id="app"></div>
@@ -76,7 +93,8 @@
     crossorigin="anonymous"
     style="display:none"
   ></video>
-
+  <div id="coordsBox"></div>
   <script type="module" src="./main-preview.js"></script>
+  
 </body>
 </html>
