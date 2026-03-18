@@ -11,6 +11,10 @@ const ui = document.querySelector('#ui');
 const video = document.querySelector('#promoVideo');
 const app = document.querySelector('#app');
 
+// TOEGEVOEGD:
+// plane globaal maken zodat playVideoBtn hem ook kan tonen
+let plane = null;
+
 function setStatus(text) {
   statusEl.textContent = text;
   console.log(text);
@@ -41,13 +45,24 @@ function hidePlayButton() {
 if (playVideoBtn) {
   playVideoBtn.addEventListener('click', async () => {
     try {
+      // TOEGEVOEGD:
+      // expliciet audio aan
+      video.muted = false;
+
       video.currentTime = 0;
       await video.play();
+
+      // TOEGEVOEGD:
+      // plane forceren zichtbaar te zijn zodra video start
+      if (plane) {
+        plane.visible = true;
+      }
+
       hidePlayButton();
       setStatus('Video speelt');
     } catch (err) {
       console.warn('Video play geblokkeerd:', err);
-      showError('❌ Video kon niet gestart worden');
+      showError(`❌ Video kon niet gestart worden: ${err.message}`);
     }
   });
 }
@@ -55,6 +70,9 @@ if (playVideoBtn) {
 startBtn.addEventListener('click', async () => {
   video.setAttribute('playsinline', '');
   video.setAttribute('webkit-playsinline', '');
+
+  // TOEGEVOEGD:
+  // preload helpen
   video.load();
 
   await startAR();
@@ -126,7 +144,9 @@ async function startAR() {
     const videoTexture = new THREE.VideoTexture(video);
     videoTexture.colorSpace = THREE.SRGBColorSpace;
 
-    const plane = new THREE.Mesh(
+    // AANGEPAST:
+    // plane nu in globale variabele zetten
+    plane = new THREE.Mesh(
       new THREE.PlaneGeometry(1.2, 0.675),
       new THREE.MeshBasicMaterial({
         map: videoTexture,
@@ -148,25 +168,17 @@ async function startAR() {
         modelLoaded = true;
 
         const model = gltf.scene;
-
-        // ================================
-        // NIEUW: wrapper group tussen anchor en model
-        // ================================
         const wrapper = new THREE.Group();
 
-        // ================================
-        // BELANGRIJK: reset het ruwe model eerst
-        // zodat alleen de wrapper jouw preview-waardes draagt
-        // ================================
         model.position.set(0, 0, 0);
         model.rotation.set(0, 0, 0);
         model.scale.set(1, 1, 1);
 
-        // ================================
-        // JOUW GETUNDE WAARDES HIER
-        // afkomstig uit preview
-        // ================================
-        wrapper.position.set(0.000, -0.500, -0.098);
+        // AANGEPAST:
+        // hoogte minder extreem maken
+        // hoger = tweede waarde groter maken
+        // lager = tweede waarde kleiner maken
+        wrapper.position.set(0.000, -0.150, -0.098);
         wrapper.rotation.set(-1.388, 3.142, 1.138);
         wrapper.scale.set(0.133, 0.133, 0.133);
 
@@ -181,7 +193,6 @@ async function startAR() {
           }
         });
 
-        // model in wrapper, wrapper in anchor
         wrapper.add(model);
         anchor.group.add(wrapper);
 
@@ -201,15 +212,22 @@ async function startAR() {
 
     anchor.onTargetFound = () => {
       setStatus('Target gevonden');
-      plane.visible = true;
+      if (plane) {
+        plane.visible = true;
+      }
       showPlayButton();
     };
 
-anchor.onTargetLost = () => {
-  setStatus('Target kwijt');
-  plane.visible = false;
-  hidePlayButton();
-};
+    anchor.onTargetLost = () => {
+      setStatus('Target kwijt');
+      if (plane) {
+        plane.visible = false;
+      }
+
+      // AANGEPAST:
+      // video niet pauzeren, anders lijkt play vaak kapot op mobiel
+      hidePlayButton();
+    };
 
     await mindarThree.start();
 
@@ -217,7 +235,10 @@ anchor.onTargetLost = () => {
       renderer.render(scene, camera);
     });
 
-    ui.classList.add('hidden');
+    // AANGEPAST:
+    // tijdelijk niet verbergen, anders kan je knop in verborgen UI zitten
+    // ui.classList.add('hidden');
+
     setStatus('Scan de afbeelding');
 
   } catch (err) {
