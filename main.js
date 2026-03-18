@@ -13,13 +13,16 @@ function setStatus(text) {
   statusEl.textContent = text;
   console.log(text);
 }
-/*
+
+// TOEGEVOEGD / GEFIXT:
+// deze functie stond uitgecomment, maar werd later wel gebruikt.
+// Daardoor zou je code crashen bij een error.
 function showError(text) {
   console.error(text);
   errorBox.style.display = 'block';
   errorBox.innerText = text;
 }
-*/
+
 function clearError() {
   errorBox.style.display = 'none';
 }
@@ -27,12 +30,13 @@ function clearError() {
 startBtn.addEventListener('click', async () => {
   await startAR();
 
-  // 🔊 VIDEO STARTEN MET GELUID (cruciaal)
+  // Bestaand:
+  // video starten na user interaction
   try {
-    video.currentTime = 0; // start vanaf begin
+    video.currentTime = 0;
     await video.play();
   } catch (err) {
-    console.warn("Video play geblokkeerd:", err);
+    console.warn('Video play geblokkeerd:', err);
   }
 });
 
@@ -64,25 +68,47 @@ async function startAR() {
     });
 
     const { renderer, scene, camera } = mindarThree;
-  // ================================
-  // 2. RENDERER SETTINGS (BELANGRIJK!)
-  // zorgt voor betere kleuren en contrast
-  // ================================
-    renderer.toneMapping = THREE.ACESFilmicToneMapping; // realistische belichting
-    renderer.toneMappingExposure = 1.0; // brightness
-    renderer.outputColorSpace = THREE.SRGBColorSpace; // correcte kleuren
 
-    // Licht
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1));
+    // TOEGEVOEGD:
+    // renderer settings voor mooiere kleuren en contrast
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    // TOEGEVOEGD:
+    // basislicht - zachte algemene belichting
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+    scene.add(hemiLight);
+
+    // TOEGEVOEGD:
+    // hoofdlicht - geeft vorm, highlights en meer diepte aan je model
+    const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    mainLight.position.set(2, 4, 3);
+    scene.add(mainLight);
+
+    // TOEGEVOEGD:
+    // fill light - maakt de schaduwkant zachter
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
+    fillLight.position.set(-2, 2, -2);
+    scene.add(fillLight);
 
     const anchor = mindarThree.addAnchor(0);
 
     // Video plane
     const videoTexture = new THREE.VideoTexture(video);
+
+    // TOEGEVOEGD:
+    // optionele kwaliteitsinstellingen voor video texture
+    videoTexture.colorSpace = THREE.SRGBColorSpace;
+
     const plane = new THREE.Mesh(
       new THREE.PlaneGeometry(1.2, 0.675),
-      new THREE.MeshBasicMaterial({ map: videoTexture })
+      new THREE.MeshBasicMaterial({
+        map: videoTexture,
+        transparent: true, // TOEGEVOEGD: handig als je later alpha of overlay wilt
+      })
     );
+
     anchor.group.add(plane);
 
     // Model laden
@@ -99,7 +125,22 @@ async function startAR() {
 
         const model = gltf.scene;
         model.scale.set(0.25, 0.25, 0.25);
-        model.position.set(0, 0, -0);
+        model.position.set(0, 0, 0);
+
+        // TOEGEVOEGD:
+        // zorgt dat meshes in het model netjes schaduw/licht kunnen ontvangen
+        model.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = false;   // shadows uit laten voor performance in AR
+            child.receiveShadow = false;
+
+            // TOEGEVOEGD:
+            // soms handig om materialen correct te updaten als ze uit Blender komen
+            if (child.material) {
+              child.material.needsUpdate = true;
+            }
+          }
+        });
 
         anchor.group.add(model);
         setStatus('Model geladen');
@@ -116,17 +157,19 @@ async function startAR() {
         showError('❌ model.glb niet gevonden of fout bestand');
       }
     }, 3000);
-/*
+
+    // TOEGEVOEGD:
+    // target found weer actief gemaakt, zodat status en video logisch werken
     anchor.onTargetFound = async () => {
       setStatus('Target gevonden');
 
       try {
         await video.play();
-      } catch {
-        showError('❌ video kon niet starten');
+      } catch (err) {
+        console.warn('❌ video kon niet starten', err);
       }
     };
-*/
+
     anchor.onTargetLost = () => {
       setStatus('Target kwijt');
       video.pause();
