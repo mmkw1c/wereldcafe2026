@@ -5,6 +5,7 @@ import { MindARThree } from 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/min
 
 const startBtn = document.querySelector('#startBtn');
 const playVideoBtn = document.querySelector('#playVideoBtn');
+const unmuteBtn = document.querySelector('#unmuteBtn');
 const statusEl = document.querySelector('#status');
 const errorBox = document.querySelector('#errorBox');
 const ui = document.querySelector('#ui');
@@ -12,20 +13,34 @@ const video = document.querySelector('#promoVideo');
 const app = document.querySelector('#app');
 
 let plane = null;
+let arStarted = false;
 
 function setStatus(text) {
-  statusEl.textContent = text;
+  if (statusEl) {
+    statusEl.textContent = text;
+    statusEl.classList.remove('hidden');
+  }
   console.log(text);
+}
+
+function hideStatus() {
+  if (statusEl) {
+    statusEl.classList.add('hidden');
+  }
 }
 
 function showError(text) {
   console.error(text);
-  errorBox.style.display = 'block';
-  errorBox.innerText = text;
+  if (errorBox) {
+    errorBox.style.display = 'block';
+    errorBox.innerText = text;
+  }
 }
 
 function clearError() {
-  errorBox.style.display = 'none';
+  if (errorBox) {
+    errorBox.style.display = 'none';
+  }
 }
 
 function showPlayButton() {
@@ -40,33 +55,40 @@ function hidePlayButton() {
   }
 }
 
+function showUnmuteButton() {
+  if (unmuteBtn) {
+    unmuteBtn.classList.remove('hidden');
+  }
+}
+
+function hideUnmuteButton() {
+  if (unmuteBtn) {
+    unmuteBtn.classList.add('hidden');
+  }
+}
+
 // ================================
-// PLAY BUTTON (DEBUG: MUTED)
+// START VIDEO (muted)
 // ================================
 if (playVideoBtn) {
   playVideoBtn.addEventListener('click', async () => {
     try {
-      video.muted = true; // 🔥 BELANGRIJK: debug zonder audio restricties
+      video.muted = true;
       video.playsInline = true;
       video.setAttribute('playsinline', '');
       video.setAttribute('webkit-playsinline', '');
 
-      console.log('Voor play():', {
-        paused: video.paused,
-        muted: video.muted,
-        readyState: video.readyState,
-      });
-
       await video.play();
 
-      console.log('Na play():', {
-        paused: video.paused,
-        muted: video.muted,
-        readyState: video.readyState,
-      });
+      if (plane) {
+        plane.visible = true;
+      }
 
       hidePlayButton();
-      setStatus('Video speelt (muted debug)');
+      showUnmuteButton();
+      hideStatus();
+      setStatus('Video speelt');
+      hideStatus();
     } catch (err) {
       console.warn('Video play geblokkeerd:', err);
       showError(`❌ Video kon niet gestart worden: ${err.message}`);
@@ -75,19 +97,51 @@ if (playVideoBtn) {
 }
 
 // ================================
+// GELUID AAN
+// ================================
+if (unmuteBtn) {
+  unmuteBtn.addEventListener('click', async () => {
+    try {
+      video.muted = false;
+
+      // extra zekerheid op mobiel
+      if (video.paused) {
+        await video.play();
+      }
+
+      hideUnmuteButton();
+      setStatus('Geluid aan');
+      hideStatus();
+    } catch (err) {
+      console.warn('Geluid aanzetten mislukt:', err);
+      showError(`❌ Geluid kon niet aangezet worden: ${err.message}`);
+    }
+  });
+}
+
+// ================================
 // START AR
 // ================================
-startBtn.addEventListener('click', async () => {
-  video.setAttribute('playsinline', '');
-  video.setAttribute('webkit-playsinline', '');
-  video.preload = 'auto';
-  video.load();
+if (startBtn) {
+  startBtn.addEventListener('click', async () => {
+    try {
+      video.setAttribute('playsinline', '');
+      video.setAttribute('webkit-playsinline', '');
+      video.preload = 'auto';
+      video.load();
 
-  await startAR();
+      await startAR();
 
-  startBtn.classList.add('hidden');
-  showPlayButton();
-});
+      arStarted = true;
+      startBtn.classList.add('hidden');
+      showPlayButton();
+      hideUnmuteButton();
+    } catch (err) {
+      console.error(err);
+      showError(`❌ Start AR mislukt: ${err.message}`);
+    }
+  });
+}
 
 // ================================
 // MAIN AR
@@ -95,14 +149,35 @@ startBtn.addEventListener('click', async () => {
 async function startAR() {
   clearError();
   hidePlayButton();
+  hideUnmuteButton();
 
   try {
     setStatus('Initialiseren...');
 
     if (!video.src || video.src.includes('undefined')) {
-      showError('❌ video.mp4 ontbreekt');
+      showError('❌ video.mp4 ontbreekt in /public/assets/');
       return;
     }
+
+    video.onerror = () => {
+      showError('❌ video.mp4 kan niet geladen worden');
+    };
+
+    video.onloadeddata = () => {
+      console.log('Video OK');
+    };
+
+    video.oncanplay = () => {
+      console.log('Video can play');
+    };
+
+    video.onplay = () => {
+      console.log('Video event: play');
+    };
+
+    video.onpause = () => {
+      console.log('Video event: pause');
+    };
 
     const mindarThree = new MindARThree({
       container: app,
@@ -112,34 +187,37 @@ async function startAR() {
     const { renderer, scene, camera } = mindarThree;
 
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-    // ================================
-    // HDRI
-    // ================================
     const rgbeLoader = new RGBELoader();
-    rgbeLoader.load('./public/tree_lined_driveway_1k.hdr', (texture) => {
-      texture.mapping = THREE.EquirectangularReflectionMapping;
-      scene.environment = texture;
-    });
+    rgbeLoader.load(
+      './public/tree_lined_driveway_1k.hdr',
+      (texture) => {
+        texture.mapping = THREE.EquirectangularReflectionMapping;
+        scene.environment = texture;
+        scene.environmentIntensity = 0.8;
+        console.log('HDRI geladen');
+      },
+      undefined,
+      () => {
+        console.warn('HDRI kon niet geladen worden, scene draait zonder HDRI');
+      }
+    );
 
-    // ================================
-    // LICHT
-    // ================================
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.2));
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+    scene.add(hemiLight);
 
-    const mainLight = new THREE.DirectionalLight(0xffffff, 1);
+    const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
     mainLight.position.set(2, 4, 3);
     scene.add(mainLight);
 
-    // ================================
-    // ANCHOR
-    // ================================
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
+    fillLight.position.set(-2, 2, -2);
+    scene.add(fillLight);
+
     const anchor = mindarThree.addAnchor(0);
 
-    // ================================
-    // VIDEO TEXTURE
-    // ================================
     const videoTexture = new THREE.VideoTexture(video);
     videoTexture.colorSpace = THREE.SRGBColorSpace;
 
@@ -148,46 +226,87 @@ async function startAR() {
       new THREE.MeshBasicMaterial({
         map: videoTexture,
         side: THREE.DoubleSide,
+        transparent: true,
       })
     );
 
-    // 🔥 BELANGRIJK: altijd zichtbaar voor debug
-    plane.visible = true;
-
+    // vlak zichtbaar zodra target gevonden is
+    plane.visible = false;
     anchor.group.add(plane);
 
-    // ================================
-    // MODEL
-    // ================================
+    setStatus('Model laden...');
+
     const loader = new GLTFLoader();
+    let modelLoaded = false;
 
-    loader.load('./public/boom.glb', (gltf) => {
-      const model = gltf.scene;
-      const wrapper = new THREE.Group();
+    loader.load(
+      './public/boom.glb',
+      (gltf) => {
+        modelLoaded = true;
 
-      model.position.set(0, 0, 0);
-      model.rotation.set(0, 0, 0);
-      model.scale.set(1, 1, 1);
+        const model = gltf.scene;
+        const wrapper = new THREE.Group();
 
-      wrapper.position.set(0.000, -0.150, -0.098);
-      wrapper.rotation.set(-1.388, 3.142, 1.138);
-      wrapper.scale.set(0.133, 0.133, 0.133);
+        model.position.set(0, 0, 0);
+        model.rotation.set(0, 0, 0);
+        model.scale.set(1, 1, 1);
 
-      wrapper.add(model);
-      anchor.group.add(wrapper);
+        wrapper.position.set(0.000, -0.150, -0.098);
+        wrapper.rotation.set(-1.388, 3.142, 1.138);
+        wrapper.scale.set(0.133, 0.133, 0.133);
 
-      setStatus('Model geladen');
-    });
+        model.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = false;
+            child.receiveShadow = false;
 
-    // ================================
-    // DEBUG: alleen logging
-    // ================================
+            if (child.material) {
+              child.material.needsUpdate = true;
+            }
+          }
+        });
+
+        wrapper.add(model);
+        anchor.group.add(wrapper);
+
+        setStatus('Model geladen');
+      },
+      undefined,
+      () => {
+        showError('❌ model.glb kon niet geladen worden (check pad of bestand)');
+      }
+    );
+
+    setTimeout(() => {
+      if (!modelLoaded) {
+        showError('❌ model.glb niet gevonden of fout bestand');
+      }
+    }, 3000);
+
     anchor.onTargetFound = () => {
       console.log('Target gevonden');
+
+      if (plane) {
+        plane.visible = true;
+      }
+
+      // alleen status tonen als video nog niet speelt
+      if (video.paused) {
+        setStatus('Scan de afbeelding om AR te starten');
+      }
     };
 
     anchor.onTargetLost = () => {
       console.log('Target kwijt');
+
+      if (plane) {
+        plane.visible = false;
+      }
+
+      // tijdens afspelen geen status meer tonen
+      if (!video.paused) {
+        hideStatus();
+      }
     };
 
     await mindarThree.start();
@@ -196,10 +315,10 @@ async function startAR() {
       renderer.render(scene, camera);
     });
 
-    setStatus('Scan de afbeelding');
+    setStatus('Scan de afbeelding om AR te starten');
 
   } catch (err) {
-    showError('❌ AR start mislukt');
+    showError('❌ AR start mislukt (targets.mind ontbreekt of fout)');
     console.error(err);
   }
 }
