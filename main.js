@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RGBELoader } from 'three/addons/loaders/RGBELoader.js'; // TOEGEVOEGD: voor HDRI laden
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { MindARThree } from 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js';
 
 const startBtn = document.querySelector('#startBtn');
+const playVideoBtn = document.querySelector('#playVideoBtn'); // TOEGEVOEGD: aparte knop voor video playback
 const statusEl = document.querySelector('#status');
 const errorBox = document.querySelector('#errorBox');
 const ui = document.querySelector('#ui');
@@ -25,26 +26,57 @@ function clearError() {
   errorBox.style.display = 'none';
 }
 
+// TOEGEVOEGD:
+// helper om de play-knop veilig te tonen
+function showPlayButton() {
+  if (playVideoBtn) {
+    playVideoBtn.classList.remove('hidden');
+  }
+}
+
+// TOEGEVOEGD:
+// helper om de play-knop veilig te verbergen
+function hidePlayButton() {
+  if (playVideoBtn) {
+    playVideoBtn.classList.add('hidden');
+  }
+}
+
+// TOEGEVOEGD:
+// aparte user interaction voor video met geluid
+if (playVideoBtn) {
+  playVideoBtn.addEventListener('click', async () => {
+    try {
+      video.currentTime = 0; // optioneel: altijd vanaf begin
+      await video.play();
+      hidePlayButton();
+      setStatus('Video speelt');
+    } catch (err) {
+      console.warn('Video play geblokkeerd:', err);
+      showError('❌ Video kon niet gestart worden');
+    }
+  });
+}
+
 startBtn.addEventListener('click', async () => {
-  // TOEGEVOEGD:
   // extra zekerheid voor mobiel/iPhone inline video
   video.setAttribute('playsinline', '');
   video.setAttribute('webkit-playsinline', '');
 
+  // TOEGEVOEGD:
+  // preload helpen voor mobiel
+  video.load();
+
   await startAR();
 
   // AANGEPAST:
-  // video starten direct na user interaction
-  try {
-    video.currentTime = 0;
-    await video.play();
-  } catch (err) {
-    console.warn('Video play geblokkeerd:', err);
-  }
+  // video niet meer hier starten, want dat is vaak niet "direct genoeg"
+  // de aparte playVideoBtn doet dat nu betrouwbaarder
 });
 
 async function startAR() {
   clearError();
+  hidePlayButton(); // TOEGEVOEGD: play-knop standaard verbergen bij opstarten
 
   try {
     setStatus('Initialiseren...');
@@ -64,6 +96,12 @@ async function startAR() {
       console.log('Video OK');
     };
 
+    // TOEGEVOEGD:
+    // extra debug moment: video is speelbaar
+    video.oncanplay = () => {
+      console.log('Video can play');
+    };
+
     // Init MindAR
     const mindarThree = new MindARThree({
       container: app,
@@ -72,13 +110,11 @@ async function startAR() {
 
     const { renderer, scene, camera } = mindarThree;
 
-    // TOEGEVOEGD:
     // renderer settings voor mooiere kleuren en contrast
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.0;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-    // TOEGEVOEGD:
     // HDRI environment map laden voor mooiere reflecties/materialen
     // Zet alleen scene.environment, NIET scene.background in AR
     const rgbeLoader = new RGBELoader();
@@ -88,8 +124,7 @@ async function startAR() {
         texture.mapping = THREE.EquirectangularReflectionMapping;
         scene.environment = texture;
 
-        // Optioneel: sommige Three.js versies ondersteunen dit niet.
-        // Laat staan als het werkt, anders kun je deze regel weghalen.
+        // Optioneel
         scene.environmentIntensity = 0.8;
 
         console.log('HDRI geladen');
@@ -100,18 +135,15 @@ async function startAR() {
       }
     );
 
-    // TOEGEVOEGD:
     // basislicht - zachte algemene belichting
     const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
     scene.add(hemiLight);
 
-    // TOEGEVOEGD:
     // hoofdlicht - geeft vorm, highlights en meer diepte aan je model
     const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
     mainLight.position.set(2, 4, 3);
     scene.add(mainLight);
 
-    // TOEGEVOEGD:
     // fill light - maakt de schaduwkant zachter
     const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
     fillLight.position.set(-2, 2, -2);
@@ -121,9 +153,6 @@ async function startAR() {
 
     // Video plane
     const videoTexture = new THREE.VideoTexture(video);
-
-    // TOEGEVOEGD:
-    // kwaliteitsinstelling voor video texture
     videoTexture.colorSpace = THREE.SRGBColorSpace;
 
     const plane = new THREE.Mesh(
@@ -134,7 +163,6 @@ async function startAR() {
       })
     );
 
-    // TOEGEVOEGD:
     // video eerst verbergen tot target gevonden is
     plane.visible = false;
 
@@ -156,11 +184,9 @@ async function startAR() {
         model.scale.set(0.25, 0.25, 0.25);
         model.position.set(0, 0, 0);
 
-        // AANGEPAST:
         // Three.js gebruikt radialen, geen graden
         model.rotation.set(0, 0, Math.PI / 2);
 
-        // TOEGEVOEGD:
         // materiaal/mesh update voor nettere rendering
         model.traverse((child) => {
           if (child.isMesh) {
@@ -190,16 +216,20 @@ async function startAR() {
     }, 3000);
 
     // AANGEPAST:
-    // video niet starten/stoppen op target events
-    // alleen zichtbaarheid van het videovlak wijzigen
+    // target gevonden -> videovlak tonen + play-knop tonen
     anchor.onTargetFound = () => {
       setStatus('Target gevonden');
       plane.visible = true;
+      showPlayButton(); // TOEGEVOEGD: gebruiker kan nu handmatig de video starten
     };
 
+    // AANGEPAST:
+    // target kwijt -> videovlak verbergen + video pauzeren + play-knop verbergen
     anchor.onTargetLost = () => {
       setStatus('Target kwijt');
       plane.visible = false;
+      video.pause(); // TOEGEVOEGD: video stoppen als target weg is
+      hidePlayButton(); // TOEGEVOEGD
     };
 
     await mindarThree.start();
