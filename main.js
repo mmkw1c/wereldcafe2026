@@ -83,7 +83,7 @@ async function startAR() {
     // Zet alleen scene.environment, NIET scene.background in AR
     const rgbeLoader = new RGBELoader();
     rgbeLoader.load(
-      './public/hdr/tree_lined_driveway_1k.hdr',
+      './public/tree_lined_driveway_1k.hdr',
       (texture) => {
         texture.mapping = THREE.EquirectangularReflectionMapping;
         scene.environment = texture;
