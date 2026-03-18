@@ -64,6 +64,13 @@ async function startAR() {
     });
 
     const { renderer, scene, camera } = mindarThree;
+  // ================================
+  // 2. RENDERER SETTINGS (BELANGRIJK!)
+  // zorgt voor betere kleuren en contrast
+  // ================================
+    renderer.toneMapping = THREE.ACESFilmicToneMapping; // realistische belichting
+    renderer.toneMappingExposure = 1.0; // brightness
+    renderer.outputColorSpace = THREE.SRGBColorSpace; // correcte kleuren
 
     // Licht
     scene.add(new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1));
