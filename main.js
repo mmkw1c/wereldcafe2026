@@ -11,8 +11,6 @@ const ui = document.querySelector('#ui');
 const video = document.querySelector('#promoVideo');
 const app = document.querySelector('#app');
 
-// TOEGEVOEGD:
-// plane globaal maken zodat playVideoBtn hem ook kan tonen
 let plane = null;
 
 function setStatus(text) {
@@ -45,18 +43,31 @@ function hidePlayButton() {
 if (playVideoBtn) {
   playVideoBtn.addEventListener('click', async () => {
     try {
-      // TOEGEVOEGD:
-      // expliciet audio aan
       video.muted = false;
+      video.playsInline = true;
+      video.setAttribute('playsinline', '');
+      video.setAttribute('webkit-playsinline', '');
 
-      video.currentTime = 0;
+      console.log('Voor play():', {
+        paused: video.paused,
+        muted: video.muted,
+        readyState: video.readyState,
+        currentTime: video.currentTime
+      });
+
+      // GEEN currentTime = 0; hier
       await video.play();
 
-      // TOEGEVOEGD:
-      // plane forceren zichtbaar te zijn zodra video start
       if (plane) {
         plane.visible = true;
       }
+
+      console.log('Na play():', {
+        paused: video.paused,
+        muted: video.muted,
+        readyState: video.readyState,
+        currentTime: video.currentTime
+      });
 
       hidePlayButton();
       setStatus('Video speelt');
@@ -70,12 +81,19 @@ if (playVideoBtn) {
 startBtn.addEventListener('click', async () => {
   video.setAttribute('playsinline', '');
   video.setAttribute('webkit-playsinline', '');
-
-  // TOEGEVOEGD:
-  // preload helpen
+  video.preload = 'auto';
   video.load();
 
   await startAR();
+
+  // NIEUW:
+  // Startknop verbergen zodra AR draait
+  startBtn.classList.add('hidden');
+
+  // NIEUW:
+  // Play-knop direct tonen nadat AR gestart is
+  // dus niet meer afhankelijk van target found/lost
+  showPlayButton();
 });
 
 async function startAR() {
@@ -100,6 +118,14 @@ async function startAR() {
 
     video.oncanplay = () => {
       console.log('Video can play');
+    };
+
+    video.onplay = () => {
+      console.log('Video event: play');
+    };
+
+    video.onpause = () => {
+      console.log('Video event: pause');
     };
 
     const mindarThree = new MindARThree({
@@ -144,8 +170,6 @@ async function startAR() {
     const videoTexture = new THREE.VideoTexture(video);
     videoTexture.colorSpace = THREE.SRGBColorSpace;
 
-    // AANGEPAST:
-    // plane nu in globale variabele zetten
     plane = new THREE.Mesh(
       new THREE.PlaneGeometry(1.2, 0.675),
       new THREE.MeshBasicMaterial({
@@ -174,10 +198,6 @@ async function startAR() {
         model.rotation.set(0, 0, 0);
         model.scale.set(1, 1, 1);
 
-        // AANGEPAST:
-        // hoogte minder extreem maken
-        // hoger = tweede waarde groter maken
-        // lager = tweede waarde kleiner maken
         wrapper.position.set(0.000, -0.150, -0.098);
         wrapper.rotation.set(-1.388, 3.142, 1.138);
         wrapper.scale.set(0.133, 0.133, 0.133);
@@ -212,10 +232,9 @@ async function startAR() {
 
     anchor.onTargetFound = () => {
       setStatus('Target gevonden');
-      if (plane) {
+      if (plane && !video.paused) {
         plane.visible = true;
       }
-      showPlayButton();
     };
 
     anchor.onTargetLost = () => {
@@ -223,10 +242,6 @@ async function startAR() {
       if (plane) {
         plane.visible = false;
       }
-
-      // AANGEPAST:
-      // video niet pauzeren, anders lijkt play vaak kapot op mobiel
-      hidePlayButton();
     };
 
     await mindarThree.start();
@@ -234,10 +249,6 @@ async function startAR() {
     renderer.setAnimationLoop(() => {
       renderer.render(scene, camera);
     });
-
-    // AANGEPAST:
-    // tijdelijk niet verbergen, anders kan je knop in verborgen UI zitten
-    // ui.classList.add('hidden');
 
     setStatus('Scan de afbeelding');
 
