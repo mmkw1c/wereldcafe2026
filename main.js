@@ -55,12 +55,7 @@ if (playVideoBtn) {
         currentTime: video.currentTime
       });
 
-      // GEEN currentTime = 0; hier
       await video.play();
-
-      if (plane) {
-        plane.visible = true;
-      }
 
       console.log('Na play():', {
         paused: video.paused,
@@ -86,13 +81,7 @@ startBtn.addEventListener('click', async () => {
 
   await startAR();
 
-  // NIEUW:
-  // Startknop verbergen zodra AR draait
   startBtn.classList.add('hidden');
-
-  // NIEUW:
-  // Play-knop direct tonen nadat AR gestart is
-  // dus niet meer afhankelijk van target found/lost
   showPlayButton();
 });
 
@@ -167,18 +156,21 @@ async function startAR() {
 
     const anchor = mindarThree.addAnchor(0);
 
-    const videoTexture = new THREE.VideoTexture(video);
-    videoTexture.colorSpace = THREE.SRGBColorSpace;
-
+    // DEBUG:
+    // tijdelijk GEEN video texture gebruiken
+    // maar een fel roze vlak zodat je zeker weet dat het vlak bestaat
     plane = new THREE.Mesh(
       new THREE.PlaneGeometry(1.2, 0.675),
       new THREE.MeshBasicMaterial({
-        map: videoTexture,
-        transparent: true,
+        color: 0xff00aa,
+        side: THREE.DoubleSide,
       })
     );
 
-    plane.visible = false;
+    // DEBUG:
+    // vlak altijd zichtbaar houden
+    plane.visible = true;
+
     anchor.group.add(plane);
 
     setStatus('Model laden...');
@@ -230,18 +222,16 @@ async function startAR() {
       }
     }, 3000);
 
+    // DEBUG:
+    // target events alleen nog loggen, vlak niet meer verbergen
     anchor.onTargetFound = () => {
       setStatus('Target gevonden');
-      if (plane && !video.paused) {
-        plane.visible = true;
-      }
+      console.log('Target found');
     };
 
     anchor.onTargetLost = () => {
       setStatus('Target kwijt');
-      if (plane) {
-        plane.visible = false;
-      }
+      console.log('Target lost');
     };
 
     await mindarThree.start();
