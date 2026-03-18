@@ -69,7 +69,7 @@ async function startPreview() {
 
     const rgbeLoader = new RGBELoader();
     rgbeLoader.load(
-      '/hdr/studio.hdr',
+      '/public/tree_lined_driveway_1k.hdr',
       (texture) => {
         texture.mapping = THREE.EquirectangularReflectionMapping;
         scene.environment = texture;
@@ -150,7 +150,7 @@ async function startPreview() {
 
     const loader = new GLTFLoader();
     loader.load(
-      '/boom.glb',
+      '/public/boom.glb',
       (gltf) => {
         const model = gltf.scene;
 
