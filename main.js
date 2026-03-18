@@ -76,7 +76,7 @@ async function startAR() {
     let modelLoaded = false;
 
     loader.load(
-      'https://elektrafungi.com/kw1c/kerstgroet.glb',
+      './public/boom.glb',
       (gltf) => {
         modelLoaded = true;
 
