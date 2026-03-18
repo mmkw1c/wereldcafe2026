@@ -69,7 +69,7 @@ async function startPreview() {
 
     const rgbeLoader = new RGBELoader();
     rgbeLoader.load(
-      '/public/tree_lined_driveway_1k.hdr',
+      '/wereldcafe2026/public/tree_lined_driveway_1k.hdr',
       (texture) => {
         texture.mapping = THREE.EquirectangularReflectionMapping;
         scene.environment = texture;
@@ -150,7 +150,7 @@ async function startPreview() {
 
     const loader = new GLTFLoader();
     loader.load(
-      '/public/boom.glb',
+      '/wereldcafe2026/public/boom.glb',
       (gltf) => {
         const model = gltf.scene;
 
