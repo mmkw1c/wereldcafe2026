@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js'; // TOEGEVOEGD: voor HDRI laden
 import { MindARThree } from 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js';
 
 const startBtn = document.querySelector('#startBtn');
@@ -14,9 +15,6 @@ function setStatus(text) {
   console.log(text);
 }
 
-// TOEGEVOEGD / GEFIXT:
-// deze functie stond uitgecomment, maar werd later wel gebruikt.
-// Daardoor zou je code crashen bij een error.
 function showError(text) {
   console.error(text);
   errorBox.style.display = 'block';
@@ -28,10 +26,15 @@ function clearError() {
 }
 
 startBtn.addEventListener('click', async () => {
+  // TOEGEVOEGD:
+  // extra zekerheid voor mobiel/iPhone inline video
+  video.setAttribute('playsinline', '');
+  video.setAttribute('webkit-playsinline', '');
+
   await startAR();
 
-  // Bestaand:
-  // video starten na user interaction
+  // AANGEPAST:
+  // video starten direct na user interaction
   try {
     video.currentTime = 0;
     await video.play();
@@ -76,6 +79,28 @@ async function startAR() {
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     // TOEGEVOEGD:
+    // HDRI environment map laden voor mooiere reflecties/materialen
+    // Zet alleen scene.environment, NIET scene.background in AR
+    const rgbeLoader = new RGBELoader();
+    rgbeLoader.load(
+      './public/hdr/tree_lined_driveway_1k.hdr',
+      (texture) => {
+        texture.mapping = THREE.EquirectangularReflectionMapping;
+        scene.environment = texture;
+
+        // Optioneel: sommige Three.js versies ondersteunen dit niet.
+        // Laat staan als het werkt, anders kun je deze regel weghalen.
+        scene.environmentIntensity = 0.8;
+
+        console.log('HDRI geladen');
+      },
+      undefined,
+      () => {
+        console.warn('HDRI kon niet geladen worden, scene draait zonder HDRI');
+      }
+    );
+
+    // TOEGEVOEGD:
     // basislicht - zachte algemene belichting
     const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
     scene.add(hemiLight);
@@ -98,16 +123,20 @@ async function startAR() {
     const videoTexture = new THREE.VideoTexture(video);
 
     // TOEGEVOEGD:
-    // optionele kwaliteitsinstellingen voor video texture
+    // kwaliteitsinstelling voor video texture
     videoTexture.colorSpace = THREE.SRGBColorSpace;
 
     const plane = new THREE.Mesh(
       new THREE.PlaneGeometry(1.2, 0.675),
       new THREE.MeshBasicMaterial({
         map: videoTexture,
-        transparent: true, // TOEGEVOEGD: handig als je later alpha of overlay wilt
+        transparent: true,
       })
     );
+
+    // TOEGEVOEGD:
+    // video eerst verbergen tot target gevonden is
+    plane.visible = false;
 
     anchor.group.add(plane);
 
@@ -126,17 +155,18 @@ async function startAR() {
         const model = gltf.scene;
         model.scale.set(0.25, 0.25, 0.25);
         model.position.set(0, 0, 0);
-        model.rotation.set(0, 0, 90);
+
+        // AANGEPAST:
+        // Three.js gebruikt radialen, geen graden
+        model.rotation.set(0, 0, Math.PI / 2);
 
         // TOEGEVOEGD:
-        // zorgt dat meshes in het model netjes schaduw/licht kunnen ontvangen
+        // materiaal/mesh update voor nettere rendering
         model.traverse((child) => {
           if (child.isMesh) {
-            child.castShadow = false;   // shadows uit laten voor performance in AR
+            child.castShadow = false;
             child.receiveShadow = false;
 
-            // TOEGEVOEGD:
-            // soms handig om materialen correct te updaten als ze uit Blender komen
             if (child.material) {
               child.material.needsUpdate = true;
             }
@@ -159,21 +189,17 @@ async function startAR() {
       }
     }, 3000);
 
-    // TOEGEVOEGD:
-    // target found weer actief gemaakt, zodat status en video logisch werken
-    anchor.onTargetFound = async () => {
+    // AANGEPAST:
+    // video niet starten/stoppen op target events
+    // alleen zichtbaarheid van het videovlak wijzigen
+    anchor.onTargetFound = () => {
       setStatus('Target gevonden');
-
-      try {
-        await video.play();
-      } catch (err) {
-        console.warn('❌ video kon niet starten', err);
-      }
+      plane.visible = true;
     };
 
     anchor.onTargetLost = () => {
       setStatus('Target kwijt');
-      video.pause();
+      plane.visible = false;
     };
 
     await mindarThree.start();
