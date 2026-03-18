@@ -13,13 +13,13 @@ function setStatus(text) {
   statusEl.textContent = text;
   console.log(text);
 }
-
+/*
 function showError(text) {
   console.error(text);
   errorBox.style.display = 'block';
   errorBox.innerText = text;
 }
-
+*/
 function clearError() {
   errorBox.style.display = 'none';
 }
