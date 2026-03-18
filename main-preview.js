@@ -5,6 +5,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const statusEl = document.querySelector('#status');
 const errorBox = document.querySelector('#errorBox');
+const coordsBox = document.querySelector('#coordsBox'); // TOEGEVOEGD: live coordinaatbox
 const video = document.querySelector('#promoVideo');
 const app = document.querySelector('#app');
 
@@ -23,6 +24,161 @@ function showError(text) {
 
 function clearError() {
   if (errorBox) errorBox.style.display = 'none';
+}
+
+function fmt(n) {
+  return Number(n).toFixed(3);
+}
+
+// TOEGEVOEGD:
+// live waardes van model tonen
+function updateCoordsBox(target) {
+  if (!coordsBox || !target) return;
+
+  coordsBox.textContent = [
+    'Model transform',
+    '',
+    `position.x: ${fmt(target.position.x)}`,
+    `position.y: ${fmt(target.position.y)}`,
+    `position.z: ${fmt(target.position.z)}`,
+    '',
+    `rotation.x: ${fmt(target.rotation.x)} rad`,
+    `rotation.y: ${fmt(target.rotation.y)} rad`,
+    `rotation.z: ${fmt(target.rotation.z)} rad`,
+    '',
+    `rotation.x: ${fmt(THREE.MathUtils.radToDeg(target.rotation.x))}°`,
+    `rotation.y: ${fmt(THREE.MathUtils.radToDeg(target.rotation.y))}°`,
+    `rotation.z: ${fmt(THREE.MathUtils.radToDeg(target.rotation.z))}°`,
+    '',
+    `scale.x: ${fmt(target.scale.x)}`,
+    `scale.y: ${fmt(target.scale.y)}`,
+    `scale.z: ${fmt(target.scale.z)}`,
+  ].join('\n');
+}
+
+// TOEGEVOEGD:
+// GUI voor realtime aanpassen
+function createTransformGUI(target) {
+  const GUI = window.GUI;
+  if (!GUI || !target) {
+    console.warn('window.GUI niet gevonden of target ontbreekt');
+    return null;
+  }
+
+  const gui = new GUI({ title: 'Model Controls' });
+
+  const state = {
+    posX: target.position.x,
+    posY: target.position.y,
+    posZ: target.position.z,
+
+    rotX: THREE.MathUtils.radToDeg(target.rotation.x),
+    rotY: THREE.MathUtils.radToDeg(target.rotation.y),
+    rotZ: THREE.MathUtils.radToDeg(target.rotation.z),
+
+    scaleX: target.scale.x,
+    scaleY: target.scale.y,
+    scaleZ: target.scale.z,
+
+    uniformScale: target.scale.x,
+
+    copyValues: () => {
+      const text = `
+model.position.set(${fmt(target.position.x)}, ${fmt(target.position.y)}, ${fmt(target.position.z)});
+model.rotation.set(${fmt(target.rotation.x)}, ${fmt(target.rotation.y)}, ${fmt(target.rotation.z)});
+model.scale.set(${fmt(target.scale.x)}, ${fmt(target.scale.y)}, ${fmt(target.scale.z)});
+      `.trim();
+
+      navigator.clipboard.writeText(text).then(() => {
+        setStatus('Transform gekopieerd');
+      }).catch(() => {
+        setStatus('Kon transform niet kopiëren');
+      });
+    },
+
+    reset: () => {
+      target.position.set(0, 0, 0);
+      target.rotation.set(0, -Math.PI / 2, 0);
+      target.scale.set(0.25, 0.25, 0.25);
+
+      state.posX = target.position.x;
+      state.posY = target.position.y;
+      state.posZ = target.position.z;
+
+      state.rotX = THREE.MathUtils.radToDeg(target.rotation.x);
+      state.rotY = THREE.MathUtils.radToDeg(target.rotation.y);
+      state.rotZ = THREE.MathUtils.radToDeg(target.rotation.z);
+
+      state.scaleX = target.scale.x;
+      state.scaleY = target.scale.y;
+      state.scaleZ = target.scale.z;
+      state.uniformScale = target.scale.x;
+
+      gui.controllersRecursive().forEach((controller) => controller.updateDisplay());
+      updateCoordsBox(target);
+    },
+  };
+
+  const posFolder = gui.addFolder('Position');
+  posFolder.add(state, 'posX', -5, 5, 0.001).name('x').onChange((v) => {
+    target.position.x = v;
+    updateCoordsBox(target);
+  });
+  posFolder.add(state, 'posY', -5, 5, 0.001).name('y').onChange((v) => {
+    target.position.y = v;
+    updateCoordsBox(target);
+  });
+  posFolder.add(state, 'posZ', -5, 5, 0.001).name('z').onChange((v) => {
+    target.position.z = v;
+    updateCoordsBox(target);
+  });
+
+  const rotFolder = gui.addFolder('Rotation (degrees)');
+  rotFolder.add(state, 'rotX', -180, 180, 0.1).name('x').onChange((v) => {
+    target.rotation.x = THREE.MathUtils.degToRad(v);
+    updateCoordsBox(target);
+  });
+  rotFolder.add(state, 'rotY', -180, 180, 0.1).name('y').onChange((v) => {
+    target.rotation.y = THREE.MathUtils.degToRad(v);
+    updateCoordsBox(target);
+  });
+  rotFolder.add(state, 'rotZ', -180, 180, 0.1).name('z').onChange((v) => {
+    target.rotation.z = THREE.MathUtils.degToRad(v);
+    updateCoordsBox(target);
+  });
+
+  const scaleFolder = gui.addFolder('Scale');
+  scaleFolder.add(state, 'uniformScale', 0.01, 3, 0.001).name('uniform').onChange((v) => {
+    target.scale.set(v, v, v);
+    state.scaleX = v;
+    state.scaleY = v;
+    state.scaleZ = v;
+    gui.controllersRecursive().forEach((controller) => controller.updateDisplay());
+    updateCoordsBox(target);
+  });
+
+  scaleFolder.add(state, 'scaleX', 0.01, 3, 0.001).name('x').onChange((v) => {
+    target.scale.x = v;
+    updateCoordsBox(target);
+  });
+  scaleFolder.add(state, 'scaleY', 0.01, 3, 0.001).name('y').onChange((v) => {
+    target.scale.y = v;
+    updateCoordsBox(target);
+  });
+  scaleFolder.add(state, 'scaleZ', 0.01, 3, 0.001).name('z').onChange((v) => {
+    target.scale.z = v;
+    updateCoordsBox(target);
+  });
+
+  gui.add(state, 'copyValues').name('Copy values');
+  gui.add(state, 'reset').name('Reset');
+
+  posFolder.open();
+  rotFolder.open();
+  scaleFolder.open();
+
+  updateCoordsBox(target);
+  return gui;
 }
 
 async function startPreview() {
@@ -156,8 +312,7 @@ async function startPreview() {
 
         model.scale.set(0.25, 0.25, 0.25);
         model.position.set(0, 0, 0);
-       model.rotation.set(0, -Math.PI / 2, 0);
-        model.rotation.y = -Math.PI / 2;
+        model.rotation.set(0, -Math.PI / 2, 0);
 
         model.traverse((child) => {
           if (child.isMesh) {
@@ -171,6 +326,12 @@ async function startPreview() {
         });
 
         scene.add(model);
+
+        // TOEGEVOEGD:
+        // realtime transform tool starten zodra model geladen is
+        createTransformGUI(model);
+        updateCoordsBox(model);
+
         setStatus('Preview klaar');
       },
       undefined,
