@@ -259,7 +259,7 @@ async function startAR() {
 
         wrapper.position.set(0.000, -0.200, -0.100);
         wrapper.rotation.set(-1.388, 3.142, 1.138);
-        wrapper.scale.set(0.133, 0.133, 0.133);
+        wrapper.scale.set(0.1, 0.1, 0.1);
 
         model.traverse((child) => {
           if (child.isMesh) {
