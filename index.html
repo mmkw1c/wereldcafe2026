@@ -1,111 +1,161 @@
-<style>
-  html, body {
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    background: #000;
-    font-family: sans-serif;
-  }
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wereld Café FF Concreet - SDG10 - Borderline</title>
 
-  #app {
-    position: fixed;
-    inset: 0;
-  }
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #000;
+      font-family: sans-serif;
+    }
 
-  #ui {
-    position: fixed;
-    inset: 0;
-    z-index: 20;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 16px;
-    text-align: center;
-    padding: 20px;
-    background: rgba(0,0,0,0.5);
-  }
+    #app {
+      position: fixed;
+      inset: 0;
+    }
 
-  #startBtn {
-    padding: 16px 20px;
-    font-size: 18px;
-    border-radius: 12px;
-    border: none;
-    background: white;
-    cursor: pointer;
-  }
+    #ui {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      text-align: center;
+      padding: 20px;
+      background: rgba(0,0,0,0.5);
+    }
 
-  #status {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0,0,0,0.7);
-    color: white;
-    padding: 10px 14px;
-    border-radius: 999px;
-    font-size: 13px;
-    z-index: 30;
-  }
+    #startBtn {
+      padding: 16px 20px;
+      font-size: 18px;
+      border-radius: 12px;
+      border: none;
+      background: white;
+      cursor: pointer;
+    }
 
-  #errorBox {
-    position: fixed;
-    top: 10px;
-    left: 10px;
-    right: 10px;
-    z-index: 40;
-    background: #ff3b30;
-    color: white;
-    padding: 12px;
-    border-radius: 10px;
-    font-size: 13px;
-    display: none;
-  }
+    #status {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      z-index: 30;
+    }
 
-  #playVideoBtn {
-    position: fixed;
-    bottom: 80px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 50;
-    padding: 14px 22px;
-    font-size: 16px;
-    border-radius: 999px;
-    border: none;
-    background: rgba(255,255,255,0.95);
-    color: #000;
-    cursor: pointer;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-    transition: transform 0.2s ease, opacity 0.2s ease;
-  }
+    #errorBox {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      z-index: 40;
+      background: #ff3b30;
+      color: white;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      display: none;
+    }
 
-  #playVideoBtn:active {
-    transform: translateX(-50%) scale(0.96);
-  }
+    #playVideoBtn {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      padding: 14px 22px;
+      font-size: 16px;
+      border-radius: 999px;
+      border: none;
+      background: rgba(255,255,255,0.95);
+      color: #000;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
 
-  /* TOEGEVOEGD */
-  #unmuteBtn {
-    position: fixed;
-    bottom: 140px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 50;
-    padding: 14px 22px;
-    font-size: 16px;
-    border-radius: 999px;
-    border: none;
-    background: rgba(255,255,255,0.95);
-    color: #000;
-    cursor: pointer;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-    transition: transform 0.2s ease, opacity 0.2s ease;
-  }
+    #playVideoBtn:active {
+      transform: translateX(-50%) scale(0.96);
+    }
 
-  #unmuteBtn:active {
-    transform: translateX(-50%) scale(0.96);
-  }
+    #unmuteBtn {
+      position: fixed;
+      bottom: 140px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      padding: 14px 22px;
+      font-size: 16px;
+      border-radius: 999px;
+      border: none;
+      background: rgba(255,255,255,0.95);
+      color: #000;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
 
-  .hidden {
-    display: none !important;
+    #unmuteBtn:active {
+      transform: translateX(-50%) scale(0.96);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.150.1/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.150.1/examples/jsm/"
+    }
   }
-</style>
+  </script>
+</head>
+<body>
+
+  <div id="app"></div>
+
+  <div id="ui">
+    <button id="startBtn">Start AR</button>
+  </div>
+
+  <div id="status">Wachten op start...</div>
+
+  <div id="errorBox"></div>
+
+  <button id="playVideoBtn" class="hidden">
+    ▶ Speel video
+  </button>
+
+  <button id="unmuteBtn" class="hidden">
+    🔊 Geluid aan
+  </button>
+
+  <video
+    id="promoVideo"
+    src="https://elektrafungi.com/kw1c/video.mp4"
+    muted
+    playsinline
+    webkit-playsinline
+    preload="auto"
+    crossorigin="anonymous"
+  ></video>
+
+  <script type="module" src="./main.js"></script>
+
+</body>
+</html>
