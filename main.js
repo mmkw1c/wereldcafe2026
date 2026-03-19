@@ -257,7 +257,7 @@ async function startAR() {
         model.rotation.set(0, 0, 0);
         model.scale.set(1, 1, 1);
 
-        wrapper.position.set(0.000, -0.150, -0.098);
+        wrapper.position.set(0.000, -0.200, -0.100);
         wrapper.rotation.set(-1.388, 3.142, 1.138);
         wrapper.scale.set(0.133, 0.133, 0.133);
 
