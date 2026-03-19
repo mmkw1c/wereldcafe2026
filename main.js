@@ -29,13 +29,13 @@ function hideStatus() {
   }
 }
 
-function showError(text) {
+/*function showError(text) {
   console.error(text);
   if (errorBox) {
     errorBox.style.display = 'block';
     errorBox.innerText = text;
   }
-}
+}*/
 
 function clearError() {
   if (errorBox) {
