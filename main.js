@@ -133,7 +133,13 @@ if (startBtn) {
       await startAR();
 
       arStarted = true;
-      startBtn.classList.add('hidden');
+
+      // AANGEPAST:
+      // niet alleen de knop, maar de hele overlay verbergen
+      if (ui) {
+        ui.classList.add('hidden');
+      }
+
       showPlayButton();
       hideUnmuteButton();
     } catch (err) {
